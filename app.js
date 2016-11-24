@@ -206,10 +206,190 @@ var proxy = new Proxy(person, {
         if(property in target){
             return target[property];
         } else{
-            throw new ReferenceError('出错咯');
+            //throw new ReferenceError('出错咯');
         }
     }
 });
 console.log(proxy.name);
 console.log(proxy.age);//执行else语句，抛出错误
+
+//set方法用于给属性赋值的拦截
+let validator = {
+    set: function(obj, prop, value) {
+        if(prop === 'age'){
+            if(!Number.isInteger(value)){
+                throw new RangeError('年龄应该是数字欧');
+            }
+            if(value > 200) {
+                throw new RangeError('年龄大于200了，害怕!!!');
+            }
+        }
+        obj[prop] = value;
+    }
+};
+let erson = new Proxy([], validator);
+erson.age = 100;//此处会检验赋值给age是否正确
+
+
+var items = new Set([1, 2, 3, 3, 4, 6, 4]);
+console.log(items.size);//输出5，Set解构不会添加重复的值
+let arrrr = [1, 1, 2, 2, 3, 4, 3];
+console.log([...new Set(arrrr)]);//利用Set做简单的去重
+
+var map = new Map();
+map.set(a, 555);
+console.log(map.get(a));
+
+//数组，类似数组，Set，Map解构拥有Iterator接口，可以用for of
+var ar = ['a', 'b', 'c'];
+var iter = ar[Symbol.iterator]();//调用这个属性会获得遍历器接口
+console.log(iter.next());//{ value: 'a', done: false }
+console.log(iter.next());//{ value: 'b', done: false }
+//字符串也是类数组对象，拥有iterator接口
+var str = 'fu';
+var iter = str[Symbol.iterator]();
+console.log(iter.next());
+console.log(iter.next());
+
+
+//yield作为Generatord函数的暂停符号,每next()调用到下一个yield语句，感觉与return类似
+function* hellowWorld(){
+    yield 'hello';
+    yield 'world';
+    return 'yeah!!!';
+}
+var hw = hellowWorld();
+console.log(hw.next());// value: 'hello', done: false }
+console.log(hw.next());//{ value: 'world', done: false }
+console.log(hw.next());//{ value: 'yeah!!!', done: true }
+
+function* yeah(x){
+    var y = 2*( yield(x+1) );
+    var z = yield(y/3);
+    return (x+y+z);
+}
+var it = yeah(5);
+console.log(it.next());//6
+//第二次next传入的参数作为上一次yield语句返回的值
+console.log(it.next(12));//8
+console.log(it.next(13));//42
+
+//使用for of时不用next调用，最后的return不会包括其中
+function* fibonacci() {
+    let[prev, curr] = [0, 1];
+    for(;;){
+        [prev, curr] = [curr, prev + curr];
+        yield curr;
+    }
+}
+for(let nnnnn of fibonacci()) {
+    if(nnnnn > 1000)break;
+    console.log('   '+nnnnn);//输出斐波那契数列
+}
+
+//如果yield后面跟着一个generator对象，则要加上*来返回这个对象
+function* fooo() {
+    yield 'a';
+    yield 'b';
+}
+function* bar() {
+    yield 'x';
+    yield* fooo();
+    yield 'y';
+}
+for(var v of bar()){
+    console.log(v);//xaby
+}
+//其实yield*就是一个for of循环，支持遍历器的都可以直接循环
+function* gen() {
+    yield* ['a', 'b', 'c'];
+}
+console.log(gen().next().value);//a
+
+//如果要把genertor函数当普通构造函数用，可以用bind绑定
+function* F(){
+    yield this.a = 1;
+    yield this.b = 2;
+}
+var bj = {};
+var f = F.bind(bj)();
+console.log(f.next().value);//1
+console.log(f.next().value);//2
+console.log(bj);//{a:1, b:2}
+
+
+//读取文件，后面好好看读取文件，html5的这些新属性
+/*function* npm(){
+    let file = new FileReader("npm-debug.log");
+    try{
+        yield console.log(file.readLine(), 10);
+    }
+    finally{
+        file.close();
+    }
+}
+npm().next();*/
+
+
+
+console.log('/*-------------promise----------------*/');
+//返回一个promise对象实例，超过规定时间，就执行resolve，执行then函数
+function timeout(ms){
+    return new Promise((resolve, reject) => {
+        setTimeout(resolve, ms, 'done');
+    });
+}
+timeout(1000).then((value) => {
+    console.log(value);
+})
+
+//相当有用的promise的then方法,第一个then返回一个promise对象，根据这个对象的状态来执行下面的
+/*getJSON('/psot/1.js').then(post => getJSON(post.commentURL)
+).then(
+    comments =>console.log('Resolved :' , comments),
+    er => console.log('Rejected:' , err)
+);*/
+
+
+//Thunkify源码，不知道为什么从书上复制的 有报错，没看懂这部分
+/*function thunkify(fn) {
+    return function() {
+        var args = new Array(arguments.length);
+        var ctx = this;
+        for (var i = 0; i < args.length; ++i) {
+            args[i] = arguments[i];
+        }
+        return function(done) {
+            var called;
+            args.push(function() {
+                if (called) return;
+                called = true;
+                done.apply(null, arguments);
+            });
+            try {
+                fn.apply(ctx, args);
+            } catch (err) {
+                done(err);
+            }
+        }
+    }
+};
+function f(a, b, callback) {
+    var sum = a + b;
+    callback(sum);
+    //callback(sum);
+}
+var ft = thunkify(f);
+ft(1, 2)(console.log);*/
+
+
+//class,类的所有方法和属性，除了显示定义在this上,都是定义在prototype上
+class B{};
+var b = new B();
+b.constructor === B.prototype.constructor//ture
+
+//es5定义的方法可以枚举，但是 class定义的不行
+var point = function(x){};
+point.prototype.toString = function(){};
+console.log(Object.keys(point.prototype));
 
